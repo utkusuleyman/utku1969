@@ -1,3 +1,4 @@
+!pip install git+https://github.com/utku1969/tvdatafeed tradingview-screener
 import yfinance as yf
 import pandas as pd
 import ta
