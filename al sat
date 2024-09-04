@@ -1,0 +1,67 @@
+import yfinance as yf
+import pandas as pd
+import ta
+import time
+
+# BIST100 endeksindeki tüm hisse senetlerinin sembollerini ekliyoruz.
+tickers = [
+    "AEFES.IS", "AGHOL.IS", "AKBNK.IS", "AKCNS.IS", "AKENR.IS", "AKGRT.IS", "AKSA.IS", "AKSEN.IS",
+    "ALARK.IS", "ALBRK.IS", "ALCAR.IS", "ALGYO.IS", "ALKIM.IS", "ARCLK.IS", "ASELS.IS", "AYDEM.IS",
+    "AYGAZ.IS", "BIMAS.IS", "BIOEN.IS", "BIZIM.IS", "BRISA.IS", "CANTE.IS", "CCOLA.IS", "CEMTS.IS",
+    "CIMSA.IS", "DEVA.IS", "DOAS.IS", "DOHOL.IS", "ECILC.IS", "ECZYT.IS", "ENJSA.IS", "ENKAI.IS",
+    "ERBOS.IS", "EREGL.IS", "FENER.IS", "FROTO.IS", "GENIL.IS", "GESAN.IS", "GLYHO.IS", "GUBRF.IS",
+    "GWIND.IS", "HALKB.IS", "HEKTS.IS", "ISCTR.IS", "ISDMR.IS", "ISFIN.IS", "ISGYO.IS", "ISMEN.IS",
+    "KARSN.IS", "KCHOL.IS", "KERVT.IS", "KLKIM.IS", "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMD.IS",
+    "LOGO.IS", "MGROS.IS", "MPARK.IS", "ODAS.IS", "OTKAR.IS", "OYYAT.IS", "PETKM.IS", "PGSUS.IS",
+    "PKART.IS", "PSGYO.IS", "QNBFB.IS", "SAHOL.IS", "SASA.IS", "SELEC.IS", "SISE.IS", "SOKM.IS",
+    "TAVHL.IS", "TCELL.IS", "THYAO.IS", "TKFEN.IS", "TMSN.IS", "TOASO.IS", "TRGYO.IS", "TRILC.IS",
+    "TTRAK.IS", "TSKB.IS", "TTKOM.IS", "TUPRS.IS", "ULKER.IS", "VAKBN.IS", "VESTL.IS", "VESBE.IS",
+    "YATAS.IS", "YGGYO.IS", "YKBNK.IS", "ZOREN.IS"
+]
+
+# Al sinyali veren hisseleri tutacak liste
+buy_signals = []
+
+# Her bir hisse senedi için tarama yap
+for ticker in tickers:
+    attempts = 0
+    success = False
+    
+    while attempts < 3 and not success:
+        try:
+            # Hisse senedi verilerini indir (1 saatlik zaman diliminde)
+            data = yf.download(ticker, period="1mo", interval="1h")
+            
+            # Eğer veri yoksa bir sonraki hisseye geç
+            if data.empty:
+                print(f"{ticker}: Veri yok.")
+                break
+
+            # RSI hesapla
+            data['RSI'] = ta.momentum.RSIIndicator(close=data['Close'], window=14).rsi()
+
+            # Al sinyali (RSI 30'dan yukarı keserse)
+            data['Buy Signal'] = (data['RSI'] < 30) & (data['RSI'].shift(1) >= 30)
+
+            # Eğer son veri al sinyali veriyorsa hisseyi listeye ekle
+            if data.iloc[-1]['Buy Signal']:
+                buy_signals.append(ticker)
+                print(f"{ticker}: AL sinyali bulundu!")
+
+            success = True
+
+        except Exception as e:
+            print(f"{ticker}: Veri indirme hatası - {str(e)}")
+            attempts += 1
+            time.sleep(5)  # Yeniden denemeden önce biraz bekle
+
+        # API sınırlarını aşmamak için istekler arasında uyku süresi
+        time.sleep(1)  # Gerektiğinde süreyi artırabilirsiniz
+
+# Al sinyali veren hisseleri yazdır
+if buy_signals:
+    print("\nAl sinyali veren hisseler:")
+    for signal in buy_signals:
+        print(signal)
+else:
+    print("\nAl sinyali veren hisse bulunamadı.")
